@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestor iFood - Controle de Corridas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  /* ---- Reset e base ---- */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --red: #EA1D2C;
+    --red-dark: #B71525;
+    --green: #00C47A;
+    --yellow: #F59E0B;
+    --surface: #F5F5F5;
+    --card: #FFFFFF;
+    --border: rgba(0,0,0,.09);
+    --text: #0D0D0D;
+    --text2: #555555;
+    --text3: #8A8A8A;
+    --radius: 14px;
+    --shadow: 0 2px 12px rgba(0,0,0,.07);
+  }
+  /* Dark mode via data-theme no <html> (toggle manual) ou preferencia do sistema */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --surface: #111111;
+      --card: #1C1C1C;
+      --border: rgba(255,255,255,.09);
+      --text: #F5F5F5;
+      --text2: #AAAAAA;
+      --text3: #666666;
+      --shadow: 0 2px 12px rgba(0,0,0,.3);
+    }
+  }
+  [data-theme="dark"] {
+    --surface: #111111;
+    --card: #1C1C1C;
+    --border: rgba(255,255,255,.09);
+    --text: #F5F5F5;
+    --text2: #AAAAAA;
+    --text3: #666666;
+    --shadow: 0 2px 12px rgba(0,0,0,.3);
+  }
+  [data-theme="light"] {
+    --surface: #F5F5F5;
+    --card: #FFFFFF;
+    --border: rgba(0,0,0,.09);
+    --text: #0D0D0D;
+    --text2: #555555;
+    --text3: #8A8A8A;
+    --shadow: 0 2px 12px rgba(0,0,0,.07);
+  }
+  .btn-tema {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    transition: background .15s, color .15s;
+    flex-shrink: 0;
+  }
+  .btn-tema:hover { background: var(--surface); color: var(--text); }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ---- Nav ---- */
+  .nav {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 17px;
+    color: var(--text);
+  }
+  .nav-logo {
+    width: 32px; height: 32px;
+    background: var(--red);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 16px; font-weight: 800;
+  }
+  .nav-tabs {
+    display: flex;
+    gap: 2px;
+  }
+  .nav-tab {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all .15s;
+  }
+  .nav-tab.active, .nav-tab:hover {
+    background: var(--surface);
+    color: var(--text);
+  }
+  .nav-tab.active { font-weight: 600; }
+
+  /* ---- Container ---- */
+  .container { max-width: 860px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  /* ---- Views ---- */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ---- Hero ---- */
+  .hero {
+    background: var(--red);
+    border-radius: var(--radius);
+    padding: 22px 24px 18px;
+    margin-bottom: 14px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+  .hero-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; color: rgba(255,255,255,.6); text-transform: uppercase; margin-bottom: 4px; }
+  .hero-num { font-family: 'Sora', sans-serif; font-size: 50px; font-weight: 800; color: #fff; line-height: 1; }
+  .hero-sub { font-size: 12px; color: rgba(255,255,255,.7); margin-top: 6px; }
+  .hero-right { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+  .hero-arc-label { font-size: 10px; color: rgba(255,255,255,.55); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  /* Container do arco: SVG atras, texto HTML na frente */
+  .arc-wrap {
+    position: relative;
+    width: 130px;
+    height: 72px; /* metade do circulo */
+    overflow: hidden; /* corta a metade de baixo do circulo */
+  }
+  .arc-wrap svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+  .arc-val-wrap {
+    position: absolute;
+    bottom: 2px;
+    left: 0; right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .arc-val {
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .arc-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,.65);
+    font-family: 'Inter', sans-serif;
+    line-height: 1;
+    margin-top: 2px;
+  }
+
+  /* ---- KPIs ---- */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .kpi {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .kpi-label { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 6px; }
+  .kpi-val { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
+  .kpi-delta { font-size: 11px; margin-top: 4px; font-weight: 500; }
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .neutral { color: var(--text3); }
+
+  /* ---- Cards ---- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ---- Metas ---- */
+  .metas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .meta-item { display: flex; flex-direction: column; gap: 6px; }
+  .meta-header { display: flex; justify-content: space-between; align-items: center; }
+  .meta-name { font-size: 12px; color: var(--text2); font-weight: 500; }
+  .bar-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+  .meta-vals { font-size: 11px; color: var(--text3); }
+  .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+  .badge-ok { background: #D1FAE5; color: #065F46; }
+  .badge-warn { background: #FEF3C7; color: #92400E; }
+  .badge-danger { background: #FEE2E2; color: #991B1B; }
+
+  /* ---- Custos ---- */
+  .custos-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--border);
+  }
+  .custos-row:last-child { border-bottom: none; }
+  .custos-name { font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .custos-val { font-size: 13px; font-weight: 600; color: var(--text); }
+  .custos-pct { font-size: 11px; color: var(--text3); margin-left: 6px; }
+  .custos-totals { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .custos-total-item { }
+  .custos-total-label { font-size: 11px; color: var(--text3); margin-bottom: 2px; }
+  .custos-total-val { font-family: 'Sora', sans-serif; font-size: 17px; font-weight: 800; color: var(--text); }
+
+  /* ---- Heatmap dias ---- */
+  .dias-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .dia-head { font-size: 9px; color: var(--text3); text-align: center; font-weight: 600; padding: 0 0 4px; }
+  .dia-cell {
+    border-radius: 6px; padding: 7px 2px;
+    text-align: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .dia-sub { font-size: 9px; opacity: .65; margin-top: 1px; }
+  .day-high { background: #D1FAE5; color: #065F46; }
+  .day-mid { background: #FEF3C7; color: #92400E; }
+  .day-low { background: #FEE2E2; color: #991B1B; }
+
+  /* ---- Resumo mensal ---- */
+  .resumo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .resumo-item { text-align: center; }
+  .resumo-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+  .resumo-val { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 800; color: var(--text); }
+
+  /* ---- Formulario ---- */
+  .form-section { margin-bottom: 20px; }
+  .form-section-title {
+    font-size: 12px; font-weight: 700; color: var(--text3);
+    letter-spacing: .07em; text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; font-weight: 500; color: var(--text2); }
+  .field input, .field select, .field textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--red);
+  }
+  .field .hint { font-size: 11px; color: var(--text3); }
+
+  /* ---- Botoes ---- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all .15s;
+  }
+  .btn-primary { background: var(--red); color: #fff; }
+  .btn-primary:hover { background: var(--red-dark); }
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .btn-secondary:hover { background: var(--surface); }
+  .btn-danger { background: #FEE2E2; color: #991B1B; }
+  .btn-danger:hover { background: #FECACA; }
+  .btn-row { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+
+  /* ---- Historico ---- */
+  .hist-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .hist-table th {
+    text-align: left; padding: 8px 10px;
+    font-size: 11px; font-weight: 600; color: var(--text3);
+    border-bottom: 1px solid var(--border); letter-spacing: .04em;
+  }
+  .hist-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .hist-table tr:last-child td { border-bottom: none; }
+  .hist-table tr:hover td { background: var(--surface); }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
+  .empty-state .icon { font-size: 36px; margin-bottom: 10px; opacity: .4; }
+  .empty-state p { font-size: 13px; }
+
+  /* ---- Toast ---- */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #0D0D0D; color: #fff;
+    padding: 12px 18px; border-radius: 10px;
+    font-size: 13px; font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+    transform: translateY(80px); opacity: 0;
+    transition: all .25s ease;
+    z-index: 999;
+    box-shadow: 0 4px 20px rgba(0,0,0,.2);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: #065F46; }
+  .toast.error { background: #991B1B; }
+
+  /* ---- Metas config ---- */
+  .metas-config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 600px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid-3 { grid-template-columns: 1fr 1fr; }
+    .metas-grid { grid-template-columns: 1fr; }
+    .resumo-grid { grid-template-columns: 1fr 1fr; }
+    .hero-num { font-size: 38px; }
+  }
+
+  /* ---- Seletor de data no historico ---- */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+  .filter-bar select, .filter-bar input { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; }
+
+  /* ---- Grafico wrapper ---- */
+  .chart-wrap { position: relative; height: 160px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-logo">iF</div>
+    Gestor iFood
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('dashboard')">
+      <i class="ti ti-layout-dashboard" style="margin-right:4px;"></i>Painel
+    </button>
+    <button class="nav-tab" onclick="showView('registro')">
+      <i class="ti ti-plus" style="margin-right:4px;"></i>Registrar Dia
+    </button>
+    <button class="nav-tab" onclick="showView('historico')">
+      <i class="ti ti-history" style="margin-right:4px;"></i>Historico
+    </button>
+    <button class="nav-tab" onclick="showView('metas')">
+      <i class="ti ti-target" style="margin-right:4px;"></i>Metas
+    </button>
+    <button class="nav-tab" onclick="showView('moto')">
+      <i class="ti ti-motorbike" style="margin-right:4px;"></i>Moto
+    </button>
+  </div>
+  <button class="btn-tema" id="btn-tema" onclick="toggleTema()" title="Alternar tema" aria-label="Alternar entre modo claro e escuro">
+    <i class="ti ti-moon" id="icon-tema"></i>
+  </button>
+</nav>
+
+<div class="container">
+
+  <!-- ======== VIEW: DASHBOARD ======== -->
+  <div id="view-dashboard" class="view active">
+
+    <div class="hero" id="hero-block">
+      <div>
+        <div class="hero-label">Lucro liquido hoje</div>
+        <div class="hero-num" id="hero-lucro">--</div>
+        <div class="hero-sub" id="hero-sub">Nenhum registro hoje ainda</div>
+      </div>
+      <div class="hero-right">
+        <div class="arc-wrap">
+          <svg viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg" id="arc-svg" aria-hidden="true">
+            <!-- trilha cinza: semicirculo de 180 a 0 (esquerda para direita, parte de cima) -->
+            <path d="M 10 65 A 55 55 0 0 1 120 65"
+              fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="9" stroke-linecap="round"/>
+            <!-- preenchimento branco: mesmo arco, controlado por dashoffset -->
+            <path d="M 10 65 A 55 55 0 0 1 120 65"
+              fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"
+              stroke-dasharray="173" id="arc-fill" stroke-dashoffset="173"/>
+          </svg>
+          <div class="arc-val-wrap">
+            <div class="arc-val" id="arc-text">--</div>
+            <div class="arc-sub">por hora</div>
+          </div>
+        </div>
+        <div class="hero-arc-label" id="arc-meta-label">meta --/h</div>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Ganho bruto hoje</div>
+        <div class="kpi-val" id="kpi-bruto">--</div>
+        <div class="kpi-delta neutral" id="kpi-bruto-delta">Sem registro anterior</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Pedidos hoje</div>
+        <div class="kpi-val" id="kpi-pedidos">--</div>
+        <div class="kpi-delta neutral" id="kpi-pedidos-delta">Sem registro anterior</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Combustivel hoje</div>
+        <div class="kpi-val" id="kpi-combustivel">--</div>
+        <div class="kpi-delta neutral" id="kpi-combustivel-pct">-- do bruto</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Ticket medio</div>
+        <div class="kpi-val" id="kpi-ticket">--</div>
+        <div class="kpi-delta neutral" id="kpi-ticket-delta">Sem historico</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-chart-bar"></i> Evolucao do mes</div>
+      <div class="chart-wrap">
+        <canvas id="chartMes" role="img" aria-label="Grafico de lucro diario do mes"></canvas>
+      </div>
+      <div class="resumo-grid" id="resumo-grid">
+        <div class="resumo-item">
+          <div class="resumo-label">Total do mes</div>
+          <div class="resumo-val" id="res-total">R$ --</div>
+        </div>
+        <div class="resumo-item">
+          <div class="resumo-label">Media R$/hora</div>
+          <div class="resumo-val up" id="res-hora">--</div>
+        </div>
+        <div class="resumo-item">
+          <div class="resumo-label">Dias trabalhados</div>
+          <div class="resumo-val" id="res-dias">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-target"></i> Metas do mes</div>
+      <div class="metas-grid" id="metas-dash"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-motorbike"></i> Custos da moto este mes</div>
+      <div id="custos-dash">
+        <div class="empty-state"><p>Configure os custos na aba Moto</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-calendar-week"></i> R$/hora por dia da semana (media)</div>
+      <div class="dias-grid" id="heatmap-header"></div>
+      <div class="dias-grid" id="heatmap-grid" style="margin-top:4px;"></div>
+      <div style="margin-top:12px; font-size:11px; color:var(--text3);" id="heatmap-dica"></div>
+    </div>
+
+  </div><!-- /dashboard -->
+
+
+  <!-- ======== VIEW: REGISTRO ======== -->
+  <div id="view-registro" class="view">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-plus"></i> Registrar novo dia</div>
+
+      <div class="form-section">
+        <div class="form-section-title"><i class="ti ti-calendar"></i> Data e jornada</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Data</label>
+            <input type="date" id="f-data">
+          </div>
+          <div class="field">
+            <label>Horas online</label>
+            <input type="number" id="f-horas" placeholder="Ex: 7.5" step="0.5" min="0" max="24">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title"><i class="ti ti-coins"></i> Ganhos</div>
+        <div class="form-grid-3">
+          <div class="field">
+            <label>Ganhos iFood (R$)</label>
+            <input type="number" id="f-ganhos" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Gorjetas (R$)</label>
+            <input type="number" id="f-gorjetas" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Outros ganhos (R$)</label>
+            <input type="number" id="f-outros-ganhos" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Pedidos realizados</label>
+            <input type="number" id="f-pedidos" placeholder="0" min="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title"><i class="ti ti-receipt"></i> Gastos do dia</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Combustivel (R$)</label>
+            <input type="number" id="f-combustivel" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Alimentacao (R$)</label>
+            <input type="number" id="f-alimentacao" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Manutencao moto (R$)</label>
+            <input type="number" id="f-manutencao" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Outros gastos (R$)</label>
+            <input type="number" id="f-outros-gastos" placeholder="0.00" step="0.01" min="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title"><i class="ti ti-note"></i> Observacoes</div>
+        <div class="field">
+          <textarea id="f-obs" rows="2" placeholder="Ex: regiao boa, chuva a tarde, bonus ativo..." style="resize:vertical;"></textarea>
+        </div>
+      </div>
+
+      <!-- Preview ao vivo -->
+      <div style="background:var(--surface); border-radius:10px; padding:14px 16px; margin-bottom:16px;" id="preview-bloco">
+        <div style="font-size:11px; color:var(--text3); font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin-bottom:10px;">Previa do dia</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+          <div>
+            <div style="font-size:11px; color:var(--text3);">Bruto</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800;" id="prev-bruto">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3);">Gastos</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800;" id="prev-gastos">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3);">Lucro liquido</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800; color:var(--green);" id="prev-lucro">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3);">R$/hora</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800;" id="prev-hora">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3);">Ticket medio</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800;" id="prev-ticket">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3);">% gasto combustivel</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800;" id="prev-pct">--</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="salvarDia()">
+          <i class="ti ti-device-floppy"></i> Salvar dia
+        </button>
+        <button class="btn btn-secondary" onclick="limparFormulario()">
+          <i class="ti ti-x"></i> Limpar
+        </button>
+      </div>
+    </div>
+  </div><!-- /registro -->
+
+
+  <!-- ======== VIEW: HISTORICO ======== -->
+  <div id="view-historico" class="view">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-history"></i> Historico de dias</div>
+      <div class="filter-bar">
+        <select id="filtro-mes" onchange="renderHistorico()">
+          <option value="">Todos os meses</option>
+        </select>
+        <span style="font-size:12px; color:var(--text3);" id="hist-count"></span>
+      </div>
+      <div id="hist-content">
+        <div class="empty-state">
+          <div class="icon"><i class="ti ti-database-off"></i></div>
+          <p>Nenhum registro ainda.<br>Va em "Registrar Dia" para comecar.</p>
+        </div>
+      </div>
+    </div>
+  </div><!-- /historico -->
+
+
+  <!-- ======== VIEW: METAS ======== -->
+  <div id="view-metas" class="view">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-target"></i> Configurar metas</div>
+      <div class="metas-config-grid">
+        <div class="field">
+          <label>Meta diaria de lucro (R$)</label>
+          <input type="number" id="m-diaria" placeholder="Ex: 100" min="0">
+        </div>
+        <div class="field">
+          <label>Meta mensal de lucro (R$)</label>
+          <input type="number" id="m-mensal" placeholder="Ex: 2200" min="0">
+        </div>
+        <div class="field">
+          <label>Meta de R$/hora minimo</label>
+          <input type="number" id="m-hora" placeholder="Ex: 15" min="0" step="0.50">
+        </div>
+        <div class="field">
+          <label>Horas online por dia (meta)</label>
+          <input type="number" id="m-horas-dia" placeholder="Ex: 8" min="0" step="0.5">
+        </div>
+        <div class="field">
+          <label>Reserva mensal para moto (R$)</label>
+          <input type="number" id="m-reserva-moto" placeholder="Ex: 150" min="0">
+        </div>
+        <div class="field">
+          <label>Reserva de emergencia (R$)</label>
+          <input type="number" id="m-reserva-emerg" placeholder="Ex: 1000" min="0">
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button class="btn btn-primary" onclick="salvarMetas()">
+          <i class="ti ti-device-floppy"></i> Salvar metas
+        </button>
+      </div>
+    </div>
+  </div><!-- /metas -->
+
+
+  <!-- ======== VIEW: MOTO ======== -->
+  <div id="view-moto" class="view">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-motorbike"></i> Custos mensais da moto</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Combustivel - media mensal (R$)</label>
+          <input type="number" id="c-combustivel" placeholder="Ex: 420" min="0">
+          <span class="hint">Se varia bastante, coloque a media dos ultimos 3 meses</span>
+        </div>
+        <div class="field">
+          <label>Oleo do motor (R$)</label>
+          <input type="number" id="c-oleo" placeholder="Ex: 90" min="0">
+        </div>
+        <div class="field">
+          <label>Pneus - custo anual / 12 (R$)</label>
+          <input type="number" id="c-pneus" placeholder="Ex: 50" min="0">
+        </div>
+        <div class="field">
+          <label>Freios - trimestral / 3 (R$)</label>
+          <input type="number" id="c-freios" placeholder="Ex: 40" min="0">
+        </div>
+        <div class="field">
+          <label>Manutencao preventiva (R$)</label>
+          <input type="number" id="c-manutencao" placeholder="Ex: 180" min="0">
+        </div>
+        <div class="field">
+          <label>Documentacao / IPVA - anual / 12 (R$)</label>
+          <input type="number" id="c-doc" placeholder="Ex: 75" min="0">
+        </div>
+        <div class="field">
+          <label>Seguro moto - anual / 12 (R$)</label>
+          <input type="number" id="c-seguro" placeholder="Ex: 60" min="0">
+        </div>
+        <div class="field">
+          <label>Outros (R$)</label>
+          <input type="number" id="c-outros" placeholder="Ex: 30" min="0">
+        </div>
+        <div class="field">
+          <label>Km rodados por mes (media)</label>
+          <input type="number" id="c-km" placeholder="Ex: 1800" min="0">
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button class="btn btn-primary" onclick="salvarMoto()">
+          <i class="ti ti-device-floppy"></i> Salvar custos
+        </button>
+      </div>
+    </div>
+  </div><!-- /moto -->
+
+</div><!-- /container -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// ESTADO GLOBAL
+// ============================================================
+let appData = {
+  registros: [],   // array de dias registrados
+  metas: {},       // configuracoes de metas
+  moto: {}         // custos da moto
+};
+
+let chartMesInstance = null;
+
+// ============================================================
+// PERSISTENCIA: carrega e salva no localStorage
+// ============================================================
+function carregarDados() {
+  try {
+    const raw = localStorage.getItem('gestor_ifood_v1');
+    if (raw) appData = JSON.parse(raw);
+  } catch(e) {
+    console.warn('Erro ao carregar dados:', e);
+  }
+}
+
+function salvarDados() {
+  try {
+    localStorage.setItem('gestor_ifood_v1', JSON.stringify(appData));
+  } catch(e) {
+    console.warn('Erro ao salvar dados:', e);
+  }
+}
+
+// ============================================================
+// UTILIDADES
+// ============================================================
+function moeda(v) {
+  // Formata numero como moeda brasileira
+  if (v === null || v === undefined || isNaN(v)) return '--';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function moedaCurta(v) {
+  // Versao curta sem casas decimais para KPIs grandes
+  if (v === null || v === undefined || isNaN(v)) return '--';
+  return 'R$' + Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+}
+
+function num(id) {
+  // Le valor numerico de um input pelo id
+  return parseFloat(document.getElementById(id)?.value) || 0;
+}
+
+function hojeISO() {
+  // Retorna data de hoje no formato YYYY-MM-DD
+  return new Date().toISOString().split('T')[0];
+}
+
+function formatarData(iso) {
+  // Converte YYYY-MM-DD para DD/MM/YYYY
+  if (!iso) return '--';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function mesAno(iso) {
+  // Retorna "Jan/2025" a partir de YYYY-MM-DD
+  if (!iso) return '';
+  const [y, m] = iso.split('-');
+  const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return `${nomes[parseInt(m)-1]}/${y}`;
+}
+
+function diaDaSemana(iso) {
+  // Retorna 0=dom, 1=seg ... 6=sab
+  if (!iso) return -1;
+  const [y, m, d] = iso.split('-');
+  return new Date(y, m - 1, d).getDay();
+}
+
+function toast(msg, tipo = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${tipo} show`;
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function badge(pct) {
+  // Retorna HTML do badge de progresso de meta
+  const p = Math.round(pct * 100);
+  if (pct >= 1) return `<span class="badge badge-ok">${p}%</span>`;
+  if (pct >= 0.75) return `<span class="badge badge-warn">${p}%</span>`;
+  return `<span class="badge badge-danger">${p}%</span>`;
+}
+
+function barColor(pct) {
+  if (pct >= 1) return 'var(--green)';
+  if (pct >= 0.75) return 'var(--yellow)';
+  return 'var(--red)';
+}
+
+// ============================================================
+// NAVEGACAO ENTRE VIEWS
+// ============================================================
+function showView(nome) {
+  // Esconde todas as views e mostra a selecionada
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + nome)?.classList.add('active');
+
+  // Marca o tab ativo pela ordem: dashboard, registro, historico, metas, moto
+  const ordem = ['dashboard', 'registro', 'historico', 'metas', 'moto'];
+  const idx = ordem.indexOf(nome);
+  document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
+
+  // Acao especifica por view
+  if (nome === 'dashboard') renderDashboard();
+  if (nome === 'historico') renderHistorico();
+  if (nome === 'metas') carregarFormMetas();
+  if (nome === 'moto') carregarFormMoto();
+}
+
+// ============================================================
+// FORMULARIO: REGISTRO DIARIO
+// ============================================================
+function setupFormulario() {
+  // Preenche data de hoje por padrao
+  document.getElementById('f-data').value = hojeISO();
+
+  // Adiciona listener de preview ao vivo em todos os campos de ganho/gasto
+  const campos = ['f-ganhos','f-gorjetas','f-outros-ganhos','f-pedidos',
+                  'f-combustivel','f-alimentacao','f-manutencao','f-outros-gastos','f-horas'];
+  campos.forEach(id => {
+    document.getElementById(id)?.addEventListener('input', atualizarPreview);
+  });
+}
+
+function atualizarPreview() {
+  // Calcula e exibe previa em tempo real enquanto usuario digita
+  const bruto = num('f-ganhos') + num('f-gorjetas') + num('f-outros-ganhos');
+  const gastos = num('f-combustivel') + num('f-alimentacao') + num('f-manutencao') + num('f-outros-gastos');
+  const lucro = bruto - gastos;
+  const horas = num('f-horas');
+  const pedidos = num('f-pedidos');
+
+  document.getElementById('prev-bruto').textContent = moeda(bruto);
+  document.getElementById('prev-gastos').textContent = moeda(gastos);
+  document.getElementById('prev-lucro').textContent = moeda(lucro);
+  document.getElementById('prev-hora').textContent = horas > 0 ? moeda(lucro / horas) + '/h' : '--';
+  document.getElementById('prev-ticket').textContent = pedidos > 0 ? moeda(bruto / pedidos) : '--';
+  document.getElementById('prev-pct').textContent = bruto > 0 ? Math.round((gastos / bruto) * 100) + '%' : '--';
+
+  // Colore lucro conforme positivo/negativo
+  const elLucro = document.getElementById('prev-lucro');
+  elLucro.style.color = lucro >= 0 ? 'var(--green)' : 'var(--red)';
+}
+
+function salvarDia() {
+  const data = document.getElementById('f-data').value;
+  if (!data) { toast('Informe a data do dia', 'error'); return; }
+
+  // Monta objeto do registro
+  const registro = {
+    id: Date.now(),
+    data,
+    horas: num('f-horas'),
+    pedidos: num('f-pedidos'),
+    ganhos_ifood: num('f-ganhos'),
+    gorjetas: num('f-gorjetas'),
+    outros_ganhos: num('f-outros-ganhos'),
+    bruto: num('f-ganhos') + num('f-gorjetas') + num('f-outros-ganhos'),
+    combustivel: num('f-combustivel'),
+    alimentacao: num('f-alimentacao'),
+    manutencao: num('f-manutencao'),
+    outros_gastos: num('f-outros-gastos'),
+    gastos: num('f-combustivel') + num('f-alimentacao') + num('f-manutencao') + num('f-outros-gastos'),
+    obs: document.getElementById('f-obs').value.trim()
+  };
+  registro.lucro = registro.bruto - registro.gastos;
+  registro.rph = registro.horas > 0 ? registro.lucro / registro.horas : 0;
+
+  // Verifica se ja existe registro para esta data e substitui
+  const existeIdx = appData.registros.findIndex(r => r.data === data);
+  if (existeIdx >= 0) {
+    registro.id = appData.registros[existeIdx].id;
+    appData.registros[existeIdx] = registro;
+    toast('Dia atualizado com sucesso!');
+  } else {
+    appData.registros.push(registro);
+    toast('Dia salvo com sucesso!');
+  }
+
+  salvarDados();
+  limparFormulario();
+  showView('dashboard');
+}
+
+function limparFormulario() {
+  ['f-ganhos','f-gorjetas','f-outros-ganhos','f-pedidos',
+   'f-combustivel','f-alimentacao','f-manutencao','f-outros-gastos','f-horas','f-obs']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('f-data').value = hojeISO();
+  atualizarPreview();
+}
+
+// ============================================================
+// DASHBOARD: RENDER PRINCIPAL
+// ============================================================
+function renderDashboard() {
+  const hoje = hojeISO();
+  const metas = appData.metas || {};
+
+  // Mes atual
+  const mesAtual = hoje.slice(0, 7); // YYYY-MM
+  const regMes = appData.registros.filter(r => r.data.startsWith(mesAtual));
+  const regHoje = appData.registros.find(r => r.data === hoje);
+
+  // ---- Hero: dados de hoje ----
+  if (regHoje) {
+    document.getElementById('hero-lucro').textContent = moedaCurta(regHoje.lucro);
+    document.getElementById('hero-sub').textContent =
+      `${regHoje.horas}h online · ${regHoje.pedidos} pedidos · ${formatarData(hoje)}`;
+
+    // Arco de R$/hora
+    const metaHora = parseFloat(metas.hora) || 0;
+    const rph = regHoje.rph || 0;
+    document.getElementById('arc-text').textContent = moeda(rph) + '/h';
+    document.getElementById('arc-meta-label').textContent = metaHora > 0 ? `meta R$${metaHora}/h` : 'meta nao definida';
+
+    if (metaHora > 0) {
+      const pct = Math.min(rph / metaHora, 1);
+      // Arco total = 126 de stroke-dasharray; offset contrario = quanto nao preencheu
+      document.getElementById('arc-fill').setAttribute('stroke-dashoffset', Math.round(173 * (1 - pct)));
+    }
+  } else {
+    document.getElementById('hero-lucro').textContent = 'Sem registro';
+    document.getElementById('hero-sub').textContent = 'Registre o dia de hoje na aba Registrar Dia';
+  }
+
+  // ---- KPIs hoje ----
+  // Encontra o dia anterior com registro para calcular deltas
+  const regsOrdenados = [...appData.registros].sort((a,b) => b.data.localeCompare(a.data));
+  const ontem = regsOrdenados.find(r => r.data < hoje);
+
+  if (regHoje) {
+    document.getElementById('kpi-bruto').textContent = moedaCurta(regHoje.bruto);
+    if (ontem) {
+      const delta = regHoje.bruto - ontem.bruto;
+      const elDelta = document.getElementById('kpi-bruto-delta');
+      elDelta.textContent = (delta >= 0 ? '+' : '') + moeda(delta) + ' vs ontem';
+      elDelta.className = 'kpi-delta ' + (delta >= 0 ? 'up' : 'down');
+    }
+
+    document.getElementById('kpi-pedidos').textContent = regHoje.pedidos;
+    if (ontem) {
+      const d = regHoje.pedidos - ontem.pedidos;
+      const el = document.getElementById('kpi-pedidos-delta');
+      el.textContent = (d >= 0 ? '+' : '') + d + ' vs ontem';
+      el.className = 'kpi-delta ' + (d >= 0 ? 'up' : 'down');
+    }
+
+    document.getElementById('kpi-combustivel').textContent = moedaCurta(regHoje.combustivel);
+    const pctComb = regHoje.bruto > 0 ? Math.round(regHoje.combustivel / regHoje.bruto * 100) : 0;
+    document.getElementById('kpi-combustivel-pct').textContent = pctComb + '% do bruto';
+    document.getElementById('kpi-combustivel-pct').className = 'kpi-delta ' + (pctComb > 30 ? 'down' : 'neutral');
+
+    const ticket = regHoje.pedidos > 0 ? regHoje.bruto / regHoje.pedidos : 0;
+    document.getElementById('kpi-ticket').textContent = moeda(ticket);
+    // Compara ticket medio com historico do mes
+    if (regMes.length > 1) {
+      const ticketMedio = regMes.reduce((s,r) => s + (r.pedidos > 0 ? r.bruto/r.pedidos : 0), 0) / regMes.length;
+      const d = ticket - ticketMedio;
+      const el = document.getElementById('kpi-ticket-delta');
+      el.textContent = (d >= 0 ? '+' : '') + moeda(d) + ' vs media';
+      el.className = 'kpi-delta ' + (d >= 0 ? 'up' : 'down');
+    }
+  } else {
+    ['kpi-bruto','kpi-pedidos','kpi-combustivel','kpi-ticket'].forEach(id => {
+      document.getElementById(id).textContent = '--';
+    });
+  }
+
+  // ---- Grafico de barras do mes ----
+  renderGraficoMes(regMes, mesAtual);
+
+  // ---- Resumo do mes ----
+  const totalLucro = regMes.reduce((s,r) => s + r.lucro, 0);
+  const totalHoras = regMes.reduce((s,r) => s + r.horas, 0);
+  const diasTrab = regMes.length;
+  const mediaRph = totalHoras > 0 ? totalLucro / totalHoras : 0;
+
+  document.getElementById('res-total').textContent = moeda(totalLucro);
+  document.getElementById('res-total').className = 'resumo-val ' + (totalLucro >= 0 ? '' : 'down');
+  document.getElementById('res-hora').textContent = moeda(mediaRph) + '/h';
+  document.getElementById('res-hora').className = 'resumo-val ' + (mediaRph >= (metas.hora||0) ? 'up' : 'down');
+  document.getElementById('res-dias').textContent = diasTrab;
+
+  // ---- Metas ----
+  renderMetasDash(regMes, totalLucro, mediaRph);
+
+  // ---- Custos moto ----
+  renderCustosDash();
+
+  // ---- Heatmap dias da semana ----
+  renderHeatmap();
+}
+
+function renderGraficoMes(regMes, mesAtual) {
+  // Descobre quantos dias tem o mes
+  const [y, m] = mesAtual.split('-');
+  const diasNoMes = new Date(y, m, 0).getDate();
+
+  // Cria array de lucro por dia (zero para dias sem registro)
+  const lucrosPorDia = Array.from({ length: diasNoMes }, (_, i) => {
+    const dStr = String(i + 1).padStart(2, '0');
+    const iso = `${mesAtual}-${dStr}`;
+    const reg = regMes.find(r => r.data === iso);
+    return reg ? reg.lucro : 0;
+  });
+  const labels = Array.from({ length: diasNoMes }, (_, i) => i + 1);
+
+  // Verifica tema ativo: data-theme tem prioridade sobre preferencia do sistema
+  const temaAtual = document.documentElement.getAttribute('data-theme');
+  const isDark = temaAtual === 'dark' || (!temaAtual && matchMedia('(prefers-color-scheme: dark)').matches);
+  const gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
+  const tickColor = isDark ? '#898781' : '#898781';
+
+  if (chartMesInstance) {
+    // Atualiza grafico existente sem recriar
+    chartMesInstance.data.labels = labels;
+    chartMesInstance.data.datasets[0].data = lucrosPorDia;
+    chartMesInstance.data.datasets[0].backgroundColor = lucrosPorDia.map(v =>
+      v === 0 ? (isDark ? '#2c2c2a' : '#e1e0d9') : (v < 0 ? '#B71525' : '#EA1D2C')
+    );
+    chartMesInstance.update();
+  } else {
+    chartMesInstance = new Chart(document.getElementById('chartMes'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: lucrosPorDia,
+          backgroundColor: lucrosPorDia.map(v =>
+            v === 0 ? (isDark ? '#2c2c2a' : '#e1e0d9') : (v < 0 ? '#B71525' : '#EA1D2C')
+          ),
+          borderRadius: 3,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ctx.raw === 0 ? 'Sem registro' : 'Lucro: R$ ' + ctx.raw.toFixed(2)
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: tickColor, font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 15 }
+          },
+          y: {
+            grid: { color: gridColor },
+            ticks: { color: tickColor, font: { size: 9 }, callback: v => 'R$' + v },
+            border: { display: false }
+          }
+        }
+      }
+    });
+  }
+}
+
+function renderMetasDash(regMes, totalLucro, mediaRph) {
+  const metas = appData.metas || {};
+  const container = document.getElementById('metas-dash');
+
+  const totalCombMes = regMes.reduce((s,r) => s + r.combustivel, 0);
+
+  // Define quais metas mostrar e como calcular o progresso
+  const itens = [
+    {
+      nome: 'Lucro mensal',
+      atual: totalLucro,
+      meta: parseFloat(metas.mensal) || 0,
+      fmt: v => moeda(v)
+    },
+    {
+      nome: 'R$/hora minimo',
+      atual: mediaRph,
+      meta: parseFloat(metas.hora) || 0,
+      fmt: v => moeda(v) + '/h'
+    },
+    {
+      nome: 'Reserva moto',
+      atual: totalCombMes,
+      meta: parseFloat(metas.reserva_moto) || 0,
+      fmt: v => moeda(v)
+    }
+  ];
+
+  if (!metas.mensal && !metas.hora) {
+    container.innerHTML = '<div style="font-size:13px; color:var(--text3); padding:8px 0;">Defina suas metas na aba Metas para ver o progresso aqui.</div>';
+    return;
+  }
+
+  container.innerHTML = itens.map(item => {
+    if (!item.meta) return '';
+    const pct = Math.min(item.atual / item.meta, 1.5);
+    const pctDisplay = Math.min(pct, 1);
+    return `
+      <div class="meta-item">
+        <div class="meta-header">
+          <span class="meta-name">${item.nome}</span>
+          ${badge(pct)}
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${Math.round(pctDisplay*100)}%; background:${barColor(pct)};"></div>
+        </div>
+        <div class="meta-vals">${item.fmt(item.atual)} de ${item.fmt(item.meta)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderCustosDash() {
+  const moto = appData.moto || {};
+  const container = document.getElementById('custos-dash');
+
+  const itens = [
+    { nome: 'Combustivel',      val: parseFloat(moto.combustivel) || 0, icone: 'ti-gas-station' },
+    { nome: 'Manutencao',       val: parseFloat(moto.manutencao) || 0, icone: 'ti-tool' },
+    { nome: 'Oleo',             val: parseFloat(moto.oleo) || 0, icone: 'ti-droplet' },
+    { nome: 'Pneus',            val: parseFloat(moto.pneus) || 0, icone: 'ti-circle' },
+    { nome: 'Freios',           val: parseFloat(moto.freios) || 0, icone: 'ti-brake' },
+    { nome: 'Documentacao',     val: parseFloat(moto.doc) || 0, icone: 'ti-file-text' },
+    { nome: 'Seguro',           val: parseFloat(moto.seguro) || 0, icone: 'ti-shield' },
+    { nome: 'Outros',           val: parseFloat(moto.outros) || 0, icone: 'ti-dots' },
+  ].filter(i => i.val > 0);
+
+  if (itens.length === 0) {
+    container.innerHTML = '<div style="font-size:13px; color:var(--text3);">Configure os custos mensais da moto na aba Moto.</div>';
+    return;
+  }
+
+  const total = itens.reduce((s, i) => s + i.val, 0);
+  const km = parseFloat(moto.km) || 0;
+
+  // Busca lucro bruto do mes para calcular percentual
+  const mesAtual = hojeISO().slice(0, 7);
+  const regMes = appData.registros.filter(r => r.data.startsWith(mesAtual));
+  const totalBruto = regMes.reduce((s, r) => s + r.bruto, 0);
+
+  const rows = itens.map(i => `
+    <div class="custos-row">
+      <span class="custos-name"><i class="ti ${i.icone}" style="font-size:14px; opacity:.55;"></i>${i.nome}</span>
+      <span>
+        <span class="custos-val">${moeda(i.val)}</span>
+        <span class="custos-pct">${total > 0 ? Math.round(i.val/total*100) : 0}%</span>
+      </span>
+    </div>
+  `).join('');
+
+  const pctDoLucro = totalBruto > 0 ? (total / totalBruto * 100).toFixed(1) : '--';
+  const custoPorKm = km > 0 ? moeda(total / km) : '--';
+
+  container.innerHTML = rows + `
+    <div class="custos-totals">
+      <div class="custos-total-item">
+        <div class="custos-total-label">Total mensal</div>
+        <div class="custos-total-val">${moeda(total)}</div>
+      </div>
+      <div class="custos-total-item" style="text-align:center;">
+        <div class="custos-total-label">% do bruto</div>
+        <div class="custos-total-val" style="color:var(--red);">${pctDoLucro}%</div>
+      </div>
+      <div class="custos-total-item" style="text-align:right;">
+        <div class="custos-total-label">Custo/km</div>
+        <div class="custos-total-val">${custoPorKm}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderHeatmap() {
+  // Calcula media de R$/hora por dia da semana com base em todos os registros
+  const nomes = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+  const totais = Array(7).fill(0);
+  const conts  = Array(7).fill(0);
+
+  appData.registros.forEach(r => {
+    const dds = diaDaSemana(r.data);
+    if (dds >= 0 && r.horas > 0) {
+      totais[dds] += r.rph;
+      conts[dds]++;
+    }
+  });
+
+  const medias = totais.map((t, i) => conts[i] > 0 ? t / conts[i] : null);
+  const maxVal = Math.max(...medias.filter(v => v !== null), 1);
+
+  // Header dos dias
+  const headerEl = document.getElementById('heatmap-header');
+  headerEl.innerHTML = nomes.map(n =>
+    `<div class="dia-head">${n}</div>`
+  ).join('');
+
+  // Celulas coloridas
+  const gridEl = document.getElementById('heatmap-grid');
+  gridEl.innerHTML = medias.map((v, i) => {
+    if (v === null) {
+      return `<div class="dia-cell" style="background:var(--surface); color:var(--text3); font-size:10px;">--</div>`;
+    }
+    const pct = v / maxVal;
+    const cls = pct >= 0.75 ? 'day-high' : (pct >= 0.4 ? 'day-mid' : 'day-low');
+    return `
+      <div class="dia-cell ${cls}">
+        R$${Math.round(v)}
+        <div class="dia-sub">/hora</div>
+      </div>
+    `;
+  }).join('');
+
+  // Dica sobre o melhor dia
+  const melhorIdx = medias.indexOf(Math.max(...medias.filter(v => v !== null)));
+  const dicaEl = document.getElementById('heatmap-dica');
+  if (appData.registros.length === 0) {
+    dicaEl.textContent = 'Registre alguns dias para ver quais rendem mais.';
+  } else {
+    dicaEl.textContent = medias[melhorIdx] !== null
+      ? `${nomes[melhorIdx]} e os dias antes e depois rendem mais. Priorize esses dias quando puder.`
+      : 'Dados insuficientes para calcular o melhor dia.';
+  }
+}
+
+// ============================================================
+// HISTORICO
+// ============================================================
+function renderHistorico() {
+  const filtromes = document.getElementById('filtro-mes').value;
+
+  // Popula opcoes de mes no filtro
+  const meses = [...new Set(appData.registros.map(r => r.data.slice(0,7)))].sort().reverse();
+  const selMes = document.getElementById('filtro-mes');
+  const valorAtual = selMes.value;
+  selMes.innerHTML = '<option value="">Todos os meses</option>' +
+    meses.map(m => `<option value="${m}" ${m === valorAtual ? 'selected' : ''}>${mesAno(m+'-01')}</option>`).join('');
+
+  const regs = [...appData.registros]
+    .filter(r => !filtromes || r.data.startsWith(filtromes))
+    .sort((a,b) => b.data.localeCompare(a.data));
+
+  document.getElementById('hist-count').textContent = `${regs.length} dia(s)`;
+
+  const container = document.getElementById('hist-content');
+  if (regs.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon"><i class="ti ti-database-off"></i></div>
+        <p>Nenhum registro encontrado.</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="hist-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Pedidos</th>
+          <th>Bruto</th>
+          <th>Gastos</th>
+          <th>Lucro</th>
+          <th>R$/h</th>
+          <th>Acao</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${regs.map(r => `
+          <tr>
+            <td>${formatarData(r.data)}</td>
+            <td>${r.pedidos}</td>
+            <td>${moeda(r.bruto)}</td>
+            <td style="color:var(--red);">${moeda(r.gastos)}</td>
+            <td style="color:${r.lucro >= 0 ? 'var(--green)' : 'var(--red)'}; font-weight:600;">${moeda(r.lucro)}</td>
+            <td>${r.horas > 0 ? moeda(r.rph)+'/h' : '--'}</td>
+            <td>
+              <button class="btn btn-danger" style="padding:4px 10px; font-size:11px;" onclick="excluirRegistro(${r.id})">
+                <i class="ti ti-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function excluirRegistro(id) {
+  if (!confirm('Excluir este registro?')) return;
+  appData.registros = appData.registros.filter(r => r.id !== id);
+  salvarDados();
+  renderHistorico();
+  toast('Registro excluido.');
+}
+
+// ============================================================
+// METAS
+// ============================================================
+function carregarFormMetas() {
+  const m = appData.metas || {};
+  document.getElementById('m-diaria').value = m.diaria || '';
+  document.getElementById('m-mensal').value = m.mensal || '';
+  document.getElementById('m-hora').value = m.hora || '';
+  document.getElementById('m-horas-dia').value = m.horas_dia || '';
+  document.getElementById('m-reserva-moto').value = m.reserva_moto || '';
+  document.getElementById('m-reserva-emerg').value = m.reserva_emerg || '';
+}
+
+function salvarMetas() {
+  appData.metas = {
+    diaria:        num('m-diaria'),
+    mensal:        num('m-mensal'),
+    hora:          num('m-hora'),
+    horas_dia:     num('m-horas-dia'),
+    reserva_moto:  num('m-reserva-moto'),
+    reserva_emerg: num('m-reserva-emerg'),
+  };
+  salvarDados();
+  toast('Metas salvas!');
+}
+
+// ============================================================
+// MOTO
+// ============================================================
+function carregarFormMoto() {
+  const c = appData.moto || {};
+  ['combustivel','oleo','pneus','freios','manutencao','doc','seguro','outros','km'].forEach(campo => {
+    document.getElementById('c-' + campo).value = c[campo] || '';
+  });
+}
+
+function salvarMoto() {
+  appData.moto = {};
+  ['combustivel','oleo','pneus','freios','manutencao','doc','seguro','outros','km'].forEach(campo => {
+    appData.moto[campo] = num('c-' + campo);
+  });
+  salvarDados();
+  toast('Custos da moto salvos!');
+}
+
+// ============================================================
+// TEMA: alterna entre light e dark mode
+// ============================================================
+function toggleTema() {
+  // Le o tema atual do elemento html
+  const html = document.documentElement;
+  const atual = html.getAttribute('data-theme');
+
+  // Detecta se o sistema prefere dark para saber o "default"
+  const sistemaEscuro = matchMedia('(prefers-color-scheme: dark)').matches;
+
+  // Logica de rotacao: sem data-theme (sistema) -> forca oposto -> volta pro sistema
+  let proximo;
+  if (!atual) {
+    // Primeira vez: forca o oposto do sistema
+    proximo = sistemaEscuro ? 'light' : 'dark';
+  } else if (atual === 'dark') {
+    proximo = 'light';
+  } else {
+    proximo = 'dark';
+  }
+
+  html.setAttribute('data-theme', proximo);
+  localStorage.setItem('gestor_ifood_tema', proximo);
+  atualizarIconeTema(proximo);
+
+  // Recria o grafico do mes para aplicar as cores corretas do novo tema
+  if (chartMesInstance) {
+    chartMesInstance.destroy();
+    chartMesInstance = null;
+  }
+  renderDashboard();
+}
+
+function atualizarIconeTema(tema) {
+  // Troca o icone da lua/sol conforme o tema ativo
+  const icon = document.getElementById('icon-tema');
+  if (!icon) return;
+  if (tema === 'dark') {
+    icon.className = 'ti ti-sun';
+  } else {
+    icon.className = 'ti ti-moon';
+  }
+}
+
+function carregarTema() {
+  // Aplica o tema salvo no localStorage ao iniciar a pagina
+  const temaSalvo = localStorage.getItem('gestor_ifood_tema');
+  if (temaSalvo) {
+    document.documentElement.setAttribute('data-theme', temaSalvo);
+    atualizarIconeTema(temaSalvo);
+  } else {
+    // Sem preferencia salva: usa icone de acordo com o sistema
+    const sistemaEscuro = matchMedia('(prefers-color-scheme: dark)').matches;
+    atualizarIconeTema(sistemaEscuro ? 'dark' : 'light');
+  }
+}
+
+// ============================================================
+// INIT: executa ao carregar a pagina
+// ============================================================
+carregarTema();
+carregarDados();
+setupFormulario();
+renderDashboard();
+</script>
+</body>
+</html>
