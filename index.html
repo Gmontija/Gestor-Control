@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestor iFood - Controle de Corridas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-logo">iF</div>
+    Gestor iFood
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('dashboard')">
+      <i class="ti ti-layout-dashboard" style="margin-right:4px;"></i>Painel
+    </button>
+    <button class="nav-tab" onclick="showView('registro')">
+      <i class="ti ti-plus" style="margin-right:4px;"></i>Registrar Dia
+    </button>
+    <button class="nav-tab" onclick="showView('historico')">
+      <i class="ti ti-history" style="margin-right:4px;"></i>Historico
+    </button>
+    <button class="nav-tab" onclick="showView('metas')">
+      <i class="ti ti-target" style="margin-right:4px;"></i>Metas
+    </button>
+    <button class="nav-tab" onclick="showView('moto')">
+      <i class="ti ti-motorbike" style="margin-right:4px;"></i>Moto
+    </button>
+  </div>
+  <button class="btn-tema" id="btn-tema" onclick="toggleTema()" title="Alternar tema" aria-label="Alternar entre modo claro e escuro">
+    <i class="ti ti-moon" id="icon-tema"></i>
+  </button>
+</nav>
+
+<div class="container">
+
+  <!-- ======== VIEW: DASHBOARD ======== -->
+  <div id="view-dashboard" class="view active">
+
+    <div class="hero" id="hero-block">
+      <div>
+        <div class="hero-label">Lucro liquido hoje</div>
+        <div class="hero-num" id="hero-lucro">--</div>
+        <div class="hero-sub" id="hero-sub">Nenhum registro hoje ainda</div>
+      </div>
+      <div class="hero-right">
+        <div class="arc-wrap">
+          <svg viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg" id="arc-svg" aria-hidden="true">
+            <!-- trilha cinza: semicirculo de 180 a 0 (esquerda para direita, parte de cima) -->
+            <path d="M 10 65 A 55 55 0 0 1 120 65"
+              fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="9" stroke-linecap="round"/>
+            <!-- preenchimento branco: mesmo arco, controlado por dashoffset -->
+            <path d="M 10 65 A 55 55 0 0 1 120 65"
+              fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"
+              stroke-dasharray="173" id="arc-fill" stroke-dashoffset="173"/>
+          </svg>
+          <div class="arc-val-wrap">
+            <div class="arc-val" id="arc-text">--</div>
+            <div class="arc-sub">por hora</div>
+          </div>
+        </div>
+        <div class="hero-arc-label" id="arc-meta-label">meta --/h</div>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Ganho bruto hoje</div>
+        <div class="kpi-val" id="kpi-bruto">--</div>
+        <div class="kpi-delta neutral" id="kpi-bruto-delta">Sem registro anterior</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Pedidos hoje</div>
+        <div class="kpi-val" id="kpi-pedidos">--</div>
+        <div class="kpi-delta neutral" id="kpi-pedidos-delta">Sem registro anterior</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Combustivel hoje</div>
+        <div class="kpi-val" id="kpi-combustivel">--</div>
+        <div class="kpi-delta neutral" id="kpi-combustivel-pct">-- do bruto</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Ticket medio</div>
+        <div class="kpi-val" id="kpi-ticket">--</div>
+        <div class="kpi-delta neutral" id="kpi-ticket-delta">Sem historico</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-chart-bar"></i> Evolucao do mes</div>
+      <div class="chart-wrap">
+        <canvas id="chartMes" role="img" aria-label="Grafico de lucro diario do mes"></canvas>
+      </div>
+      <div class="resumo-grid" id="resumo-grid">
+        <div class="resumo-item">
+          <div class="resumo-label">Total do mes</div>
+          <div class="resumo-val" id="res-total">R$ --</div>
+        </div>
+        <div class="resumo-item">
+          <div class="resumo-label">Media R$/hora</div>
+          <div class="resumo-val up" id="res-hora">--</div>
+        </div>
+        <div class="resumo-item">
+          <div class="resumo-label">Dias trabalhados</div>
+          <div class="resumo-val" id="res-dias">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-target"></i> Metas do mes</div>
+      <div class="metas-grid" id="metas-dash"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-motorbike"></i> Custos da moto este mes</div>
+      <div id="custos-dash">
+        <div class="empty-state"><p>Configure os custos na aba Moto</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-calendar-week"></i> R$/hora por dia da semana (media)</div>
+      <div class="dias-grid" id="heatmap-header"></div>
+      <div class="dias-grid" id="heatmap-grid" style="margin-top:4px;"></div>
+      <div style="margin-top:12px; font-size:11px; color:var(--text3);" id="heatmap-dica"></div>
+    </div>
+
+  </div><!-- /dashboard -->
+
+
+  <!-- ======== VIEW: REGISTRO ======== -->
+  <div id="view-registro" class="view">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-plus"></i> Registrar novo dia</div>
+
+      <div class="form-section">
+        <div class="form-section-title"><i class="ti ti-calendar"></i> Data e jornada</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Data</label>
+            <input type="date" id="f-data">
+          </div>
+          <div class="field">
+            <label>Horas online</label>
+            <input type="number" id="f-horas" placeholder="Ex: 7.5" step="0.5" min="0" max="24">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title"><i class="ti ti-coins"></i> Ganhos</div>
+        <div class="form-grid-3">
+          <div class="field">
+            <label>Ganhos iFood (R$)</label>
+            <input type="number" id="f-ganhos" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Gorjetas (R$)</label>
+            <input type="number" id="f-gorjetas" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Outros ganhos (R$)</label>
+            <input type="number" id="f-outros-ganhos" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Pedidos realizados</label>
+            <input type="number" id="f-pedidos" placeholder="0" min="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title"><i class="ti ti-receipt"></i> Gastos do dia</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Combustivel (R$)</label>
+            <input type="number" id="f-combustivel" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Alimentacao (R$)</label>
+            <input type="number" id="f-alimentacao" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Manutencao moto (R$)</label>
+            <input type="number" id="f-manutencao" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label>Outros gastos (R$)</label>
+            <input type="number" id="f-outros-gastos" placeholder="0.00" step="0.01" min="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title"><i class="ti ti-note"></i> Observacoes</div>
+        <div class="field">
+          <textarea id="f-obs" rows="2" placeholder="Ex: regiao boa, chuva a tarde, bonus ativo..." style="resize:vertical;"></textarea>
+        </div>
+      </div>
+
+      <!-- Preview ao vivo -->
+      <div style="background:var(--surface); border-radius:10px; padding:14px 16px; margin-bottom:16px;" id="preview-bloco">
+        <div style="font-size:11px; color:var(--text3); font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin-bottom:10px;">Previa do dia</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+          <div>
+            <div style="font-size:11px; color:var(--text3);">Bruto</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800;" id="prev-bruto">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3);">Gastos</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800;" id="prev-gastos">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3);">Lucro liquido</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800; color:var(--green);" id="prev-lucro">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3);">R$/hora</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800;" id="prev-hora">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3);">Ticket medio</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800;" id="prev-ticket">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3);">% gasto combustivel</div>
+            <div style="font-family:'Sora',sans-serif; font-size:18px; font-weight:800;" id="prev-pct">--</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="salvarDia()">
+          <i class="ti ti-device-floppy"></i> Salvar dia
+        </button>
+        <button class="btn btn-secondary" onclick="limparFormulario()">
+          <i class="ti ti-x"></i> Limpar
+        </button>
+      </div>
+    </div>
+  </div><!-- /registro -->
+
+
+  <!-- ======== VIEW: HISTORICO ======== -->
+  <div id="view-historico" class="view">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-history"></i> Historico de dias</div>
+      <div class="filter-bar">
+        <select id="filtro-mes" onchange="renderHistorico()">
+          <option value="">Todos os meses</option>
+        </select>
+        <span style="font-size:12px; color:var(--text3);" id="hist-count"></span>
+      </div>
+      <div id="hist-content">
+        <div class="empty-state">
+          <div class="icon"><i class="ti ti-database-off"></i></div>
+          <p>Nenhum registro ainda.<br>Va em "Registrar Dia" para comecar.</p>
+        </div>
+      </div>
+    </div>
+  </div><!-- /historico -->
+
+
+  <!-- ======== VIEW: METAS ======== -->
+  <div id="view-metas" class="view">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-target"></i> Configurar metas</div>
+      <div class="metas-config-grid">
+        <div class="field">
+          <label>Meta diaria de lucro (R$)</label>
+          <input type="number" id="m-diaria" placeholder="Ex: 100" min="0">
+        </div>
+        <div class="field">
+          <label>Meta mensal de lucro (R$)</label>
+          <input type="number" id="m-mensal" placeholder="Ex: 2200" min="0">
+        </div>
+        <div class="field">
+          <label>Meta de R$/hora minimo</label>
+          <input type="number" id="m-hora" placeholder="Ex: 15" min="0" step="0.50">
+        </div>
+        <div class="field">
+          <label>Horas online por dia (meta)</label>
+          <input type="number" id="m-horas-dia" placeholder="Ex: 8" min="0" step="0.5">
+        </div>
+        <div class="field">
+          <label>Reserva mensal para moto (R$)</label>
+          <input type="number" id="m-reserva-moto" placeholder="Ex: 150" min="0">
+        </div>
+        <div class="field">
+          <label>Reserva de emergencia (R$)</label>
+          <input type="number" id="m-reserva-emerg" placeholder="Ex: 1000" min="0">
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button class="btn btn-primary" onclick="salvarMetas()">
+          <i class="ti ti-device-floppy"></i> Salvar metas
+        </button>
+      </div>
+    </div>
+  </div><!-- /metas -->
+
+
+  <!-- ======== VIEW: MOTO ======== -->
+  <div id="view-moto" class="view">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-motorbike"></i> Custos mensais da moto</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Combustivel - media mensal (R$)</label>
+          <input type="number" id="c-combustivel" placeholder="Ex: 420" min="0">
+          <span class="hint">Se varia bastante, coloque a media dos ultimos 3 meses</span>
+        </div>
+        <div class="field">
+          <label>Oleo do motor (R$)</label>
+          <input type="number" id="c-oleo" placeholder="Ex: 90" min="0">
+        </div>
+        <div class="field">
+          <label>Pneus - custo anual / 12 (R$)</label>
+          <input type="number" id="c-pneus" placeholder="Ex: 50" min="0">
+        </div>
+        <div class="field">
+          <label>Freios - trimestral / 3 (R$)</label>
+          <input type="number" id="c-freios" placeholder="Ex: 40" min="0">
+        </div>
+        <div class="field">
+          <label>Manutencao preventiva (R$)</label>
+          <input type="number" id="c-manutencao" placeholder="Ex: 180" min="0">
+        </div>
+        <div class="field">
+          <label>Documentacao / IPVA - anual / 12 (R$)</label>
+          <input type="number" id="c-doc" placeholder="Ex: 75" min="0">
+        </div>
+        <div class="field">
+          <label>Seguro moto - anual / 12 (R$)</label>
+          <input type="number" id="c-seguro" placeholder="Ex: 60" min="0">
+        </div>
+        <div class="field">
+          <label>Outros (R$)</label>
+          <input type="number" id="c-outros" placeholder="Ex: 30" min="0">
+        </div>
+        <div class="field">
+          <label>Km rodados por mes (media)</label>
+          <input type="number" id="c-km" placeholder="Ex: 1800" min="0">
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button class="btn btn-primary" onclick="salvarMoto()">
+          <i class="ti ti-device-floppy"></i> Salvar custos
+        </button>
+      </div>
+    </div>
+  </div><!-- /moto -->
+
+</div><!-- /container -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
